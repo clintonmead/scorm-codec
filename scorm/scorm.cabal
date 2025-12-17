@@ -1,0 +1,25 @@
+cabal-version:      3.0
+name:               scorm
+version:            0.1.0.0
+synopsis:           A simple Haskell library
+description:        A basic Haskell library example
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             Your Name
+maintainer:         your.email@example.com
+build-type:         Simple
+
+library
+  exposed-modules:    Scorm
+  build-depends:      base >= 4.14 && < 5
+  hs-source-dirs:     src
+  default-language:   Haskell2010
+
+test-suite scorm-test
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  build-depends:      base >= 4.14 && < 5
+                     , scorm
+  hs-source-dirs:     test
+  default-language:   Haskell2010
+

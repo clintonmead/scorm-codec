@@ -12,8 +12,33 @@
         pkgs = import nixpkgs {
           inherit system;
         };
+        
+        haskellPackages = pkgs.haskellPackages;
+        
+        source = builtins.path {
+          name = "scorm-source";
+          path = ./scorm;
+          filter = path: type:
+            let
+              pathStr = toString path;
+              name = baseNameOf pathStr;
+            in
+            name != ".git" &&
+            name != ".direnv" &&
+            name != "result" &&
+            name != "dist-newstyle" &&
+            name != ".envrc";
+        };
+        
+        scorm = haskellPackages.callCabal2nix "scorm" source { };
+        
+        scormWithTests = pkgs.haskell.lib.doCheck scorm;
       in
       {
+        packages.default = scorm;
+        
+        checks.default = scormWithTests;
+        
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             ghc
