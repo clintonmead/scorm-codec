@@ -30,7 +30,9 @@
             name != ".envrc";
         };
         
-        scorm = haskellPackages.callCabal2nix "scorm" source { };
+        scorm = pkgs.haskell.lib.addBuildDepends
+          (haskellPackages.callCabal2nix "scorm" source { })
+          [ pkgs.zlib ];
         
         scormWithTests = pkgs.haskell.lib.doCheck scorm;
       in
@@ -44,6 +46,7 @@
             ghc
             cabal-install
             haskell-language-server
+            zlib
           ];
 
           shellHook = ''
