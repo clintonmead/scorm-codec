@@ -1,15 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Scorm
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import System.FilePath
 import System.Directory
 import System.IO.Temp
-import Control.Exception
 import Control.Monad (filterM)
 import Data.Maybe (listToMaybe)
+import System.Process
+import System.Exit (ExitCode(..))
+import qualified System.IO as IO
+import Control.Concurrent (forkIO)
+import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
 
 main :: IO ()
 main = do
@@ -39,6 +44,12 @@ main = do
   
   -- Test roundtrip for SCORM 2004 runtime
   testRoundtrip "test-data/scorm2004-runtime.zip" "SCORM 2004 Runtime"
+
+  -- Test CLI roundtrip (decode -> encode -> parse) via scorm-codec
+  testCodecRoundtrip "test-data/scorm12-simple.zip" "SCORM 1.2 Simple"
+  testCodecRoundtrip "test-data/scorm2004-simple.zip" "SCORM 2004 Simple"
+  testCodecRoundtrip "test-data/scorm12-runtime.zip" "SCORM 1.2 Runtime"
+  testCodecRoundtrip "test-data/scorm2004-runtime.zip" "SCORM 2004 Runtime"
   
   putStrLn ""
   putStrLn "✓ All tests passed!"
@@ -51,6 +62,84 @@ resolveFixture fp = do
         ]
   existing <- filterM doesFileExist candidates
   pure (listToMaybe existing)
+
+runScormCodec :: [String] -> BL.ByteString -> IO (ExitCode, BL.ByteString, String)
+runScormCodec args input = do
+  -- Use strict IO to avoid lazy IO deadlocks
+  let exePath = "./dist-newstyle/build/x86_64-linux/ghc-9.10.3/scorm-0.1.0.0/x/scorm-codec/build/scorm-codec/scorm-codec"
+  (Just hin, Just hout, Just herr, ph) <- createProcess (proc exePath args)
+    { std_in = CreatePipe
+    , std_out = CreatePipe
+    , std_err = CreatePipe
+    }
+
+  -- Write input
+  BL.hPutStr hin input
+  IO.hClose hin
+
+  -- Read output strictly
+  output <- BS.hGetContents hout
+  errorOutput <- IO.hGetContents herr
+
+  -- Wait for process
+  ec <- waitForProcess ph
+
+  -- Close handles
+  IO.hClose hout
+  IO.hClose herr
+
+  pure (ec, BL.fromStrict output, errorOutput)
+
+testCodecRoundtrip :: FilePath -> String -> IO ()
+testCodecRoundtrip filePath name = do
+  putStrLn $ "Testing CLI roundtrip (scorm-codec): " ++ name
+  mPath <- resolveFixture filePath
+  case mPath of
+    Nothing -> do
+      putStrLn $ "  ⚠ Warning: Test file not found (tried " ++ show [filePath, ".." </> filePath] ++ ")"
+      putStrLn "  Skipping test..."
+    Just path -> do
+      zipBs <- BL.readFile path
+
+      -- decode ZIP -> JSON
+      (ec1, jsonBs, err1) <- runScormCodec ["--decode"] zipBs
+      case ec1 of
+        ExitSuccess -> pure ()
+        ExitFailure c -> error $ "scorm-codec --decode failed (" ++ show c ++ "): " ++ err1
+      if BL.null jsonBs
+        then error "scorm-codec --decode produced empty JSON"
+        else putStrLn $ "  ✓ --decode produced JSON (" ++ show (BL.length jsonBs) ++ " bytes)"
+
+      -- encode JSON -> ZIP
+      (ec2, zip2, err2) <- runScormCodec ["--encode"] jsonBs
+      case ec2 of
+        ExitSuccess -> pure ()
+        ExitFailure c -> error $ "scorm-codec --encode failed (" ++ show c ++ "): " ++ err2
+      if BL.null zip2
+        then error "scorm-codec --encode produced empty ZIP"
+        else putStrLn $ "  ✓ --encode produced ZIP (" ++ show (BL.length zip2) ++ " bytes)"
+
+      -- Parse the resulting ZIP and compare key manifest fields to original
+      origPkg <- case parseScormPackage zipBs of
+        Left err -> error $ "Failed to parse original zip for CLI test: " ++ err
+        Right p -> pure p
+      rtPkg <- case parseScormPackage zip2 of
+        Left err -> error $ "Failed to parse encoded zip for CLI test: " ++ err
+        Right p -> pure p
+
+      let o = scormManifest origPkg
+      let r = scormManifest rtPkg
+      if manifestIdentifier o /= manifestIdentifier r
+        then error $ name ++ " CLI roundtrip: manifestIdentifier mismatch"
+        else putStrLn "  ✓ manifestIdentifier matches after CLI roundtrip"
+      if length (manifestOrganizations o) /= length (manifestOrganizations r)
+        then error $ name ++ " CLI roundtrip: organization count mismatch"
+        else putStrLn "  ✓ organization count matches after CLI roundtrip"
+      if length (manifestResources o) /= length (manifestResources r)
+        then error $ name ++ " CLI roundtrip: resource count mismatch"
+        else putStrLn "  ✓ resource count matches after CLI roundtrip"
+
+      putStrLn $ "  ✓ CLI roundtrip test passed for " ++ name
 
 -- | Test parsing a SCORM package
 testParse :: FilePath -> String -> IO ()
