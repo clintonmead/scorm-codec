@@ -12,6 +12,24 @@ Don't use this code blindly.
 
 ## Installation
 
+### Development Environment with Moodle
+
+For a complete development environment with Moodle (automatically configured):
+
+```bash
+nix develop
+```
+
+This will automatically:
+- Start MariaDB, PHP-FPM, and Nginx
+- Install and configure Moodle (if not already installed)
+- Display admin credentials (Username: `admin`, Password: `Admin123!`)
+- Start a static file server on port 8081
+
+Access Moodle at: http://localhost:8080
+
+### Building the SCORM Parser
+
 Build with Cabal:
 
 ```bash

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static File Server</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            margin-top: 0;
+            font-size: 2.5em;
+            text-align: center;
+        }
+        p {
+            font-size: 1.2em;
+            line-height: 1.6;
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.3);
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+            margin: 20px 0;
+        }
+        .info {
+            background: rgba(33, 150, 243, 0.3);
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #2196F3;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 Static File Server Works!</h1>
+        
+        <div class="success">
+            <strong>✓ Success!</strong> Your static file server is running correctly.
+        </div>
+        
+        <p>This page is being served by the Python HTTP server on port <strong>8081</strong>.</p>
+        
+        <div class="info">
+            <strong>ℹ️ Server Info:</strong>
+            <ul>
+                <li>Moodle: <a href="http://localhost:8080" style="color: #90caf9;">http://localhost:8080</a></li>
+                <li>Static Files: <a href="http://localhost:8081" style="color: #90caf9;">http://localhost:8081</a></li>
+            </ul>
+        </div>
+        
+        <p>You can place any static HTML, CSS, JavaScript, or other files in this directory and access them through this server.</p>
+    </div>
+</body>
+</html>
+

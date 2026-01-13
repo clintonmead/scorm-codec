@@ -15,44 +15,61 @@ import System.Exit (ExitCode(..))
 import qualified System.IO as IO
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
+import Data.List (isSuffixOf, sort)
 
 main :: IO ()
 main = do
   putStrLn "Running SCORM library tests..."
   putStrLn ""
-  
-  -- Test parsing SCORM 1.2 simple package
-  testParse "test-data/scorm12-simple.zip" "SCORM 1.2 Simple"
-  
-  -- Test parsing SCORM 2004 simple package
-  testParse "test-data/scorm2004-simple.zip" "SCORM 2004 Simple"
-  
-  -- Test parsing SCORM 1.2 runtime package
-  testParse "test-data/scorm12-runtime.zip" "SCORM 1.2 Runtime"
-  
-  -- Test parsing SCORM 2004 runtime package
-  testParse "test-data/scorm2004-runtime.zip" "SCORM 2004 Runtime"
-  
-  -- Test roundtrip for SCORM 1.2 simple
-  testRoundtrip "test-data/scorm12-simple.zip" "SCORM 1.2 Simple"
-  
-  -- Test roundtrip for SCORM 2004 simple
-  testRoundtrip "test-data/scorm2004-simple.zip" "SCORM 2004 Simple"
-  
-  -- Test roundtrip for SCORM 1.2 runtime
-  testRoundtrip "test-data/scorm12-runtime.zip" "SCORM 1.2 Runtime"
-  
-  -- Test roundtrip for SCORM 2004 runtime
-  testRoundtrip "test-data/scorm2004-runtime.zip" "SCORM 2004 Runtime"
 
-  -- Test CLI roundtrip (decode -> encode -> parse) via scorm-codec
-  testCodecRoundtrip "test-data/scorm12-simple.zip" "SCORM 1.2 Simple"
-  testCodecRoundtrip "test-data/scorm2004-simple.zip" "SCORM 2004 Simple"
-  testCodecRoundtrip "test-data/scorm12-runtime.zip" "SCORM 1.2 Runtime"
-  testCodecRoundtrip "test-data/scorm2004-runtime.zip" "SCORM 2004 Runtime"
-  
+  -- Discover all test packages
+  testPackages <- discoverTestPackages
+  putStrLn $ "Found " ++ show (length testPackages) ++ " test packages:"
+  mapM_ (\(fp, name) -> putStrLn $ "  - " ++ name ++ " (" ++ fp ++ ")") testPackages
+  putStrLn ""
+
+  -- Test parsing for all packages
+  putStrLn "=== Testing parsing ==="
+  mapM_ (\(fp, name) -> testParse fp name) testPackages
+
+  -- Test roundtrip for all packages
+  putStrLn ""
+  putStrLn "=== Testing roundtrip serialization ==="
+  mapM_ (\(fp, name) -> testRoundtrip fp name) testPackages
+
+  -- Test CLI roundtrip for all packages
+  putStrLn ""
+  putStrLn "=== Testing CLI roundtrip ==="
+  mapM_ (\(fp, name) -> testCodecRoundtrip fp name) testPackages
+
   putStrLn ""
   putStrLn "✓ All tests passed!"
+
+-- | Discover all .zip files in test-data/packages directory
+discoverTestPackages :: IO [(FilePath, String)]
+discoverTestPackages = do
+  let packagesDir = "test-data/packages"
+  exists <- doesDirectoryExist packagesDir
+  if not exists
+    then do
+      putStrLn $ "Warning: " ++ packagesDir ++ " directory not found, trying fallback locations..."
+      let fallbackDirs = ["../test-data/packages", "packages"]
+      candidates <- filterM doesDirectoryExist fallbackDirs
+      case candidates of
+        [] -> do
+          putStrLn "Error: No test packages directory found"
+          return []
+        (dir:_) -> do
+          putStrLn $ "Using: " ++ dir
+          findPackagesInDir dir
+    else findPackagesInDir packagesDir
+  where
+    findPackagesInDir :: FilePath -> IO [(FilePath, String)]
+    findPackagesInDir dir = do
+      contents <- listDirectory dir
+      let zipFiles = filter (".zip" `isSuffixOf`) contents
+      let packages = map (\file -> (dir </> file, dropExtension file)) zipFiles
+      return $ sort packages
 
 resolveFixture :: FilePath -> IO (Maybe FilePath)
 resolveFixture fp = do

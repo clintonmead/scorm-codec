@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Static Files Directory</title>
+    <link rel="stylesheet" href="/css/example.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Static Files Server</h1>
+        <p>This is the index page served from the <code>static-files/</code> directory.</p>
+        
+        <h2>Directory Structure:</h2>
+        <ul>
+            <li><a href="/hello.html">hello.html</a> - Test page</li>
+            <li><a href="/css/example.css">css/example.css</a> - Example CSS</li>
+            <li><a href="/js/example.js">js/example.js</a> - Example JavaScript</li>
+            <li><a href="/README.md">README.md</a> - Documentation</li>
+        </ul>
+        
+        <h2>How to Use:</h2>
+        <p>Place any files in the <code>static-files/</code> directory and they will be accessible at <code>http://localhost:8081/</code></p>
+        
+        <p>Subdirectories are fully supported!</p>
+    </div>
+    
+    <script src="/js/example.js"></script>
+</body>
+</html>
+
